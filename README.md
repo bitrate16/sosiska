@@ -6,6 +6,12 @@ Ever wanted to download DNS? Now you can
 
 Because I need to go touch some grass.
 
+# Install
+
+```bash
+pip install sosiska
+```
+
 # How to use
 
 This will blow up your DNS server
