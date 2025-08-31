@@ -89,23 +89,23 @@ def insert_many(
 ):
     pack = []
     for (ip, name) in batch:
-        ip_bytes = ipaddress.inet_aton(ip)
+        ip_bytes = socket.inet_aton(ip)
         pack.append((timestamp, ip_bytes, name))
 
     conn.executemany("INSERT INTO dns (timestamp, ip, name) VALUES (?, ?, ?)", pack)
+    conn.commit()
 
 
 def resolve(ip: str) -> str | None:
     try:
-        rev_name = dns.reversename.from_address(ip)
-        name = str(dns.resolver.resolve(rev_name, 'PTR')[0])
+        (name, _, _) = socket.gethostbyaddr(ip)
 
         if len(name) == 0:
             return None
 
         if name[-1] == '.':
             name = name[:-1]
-    except dns.resolver.NXDOMAIN:
+    except socket.error:
         return None
 
     return name
@@ -115,7 +115,7 @@ def batch(iterable, total: int, batch_size: int):
     it = iter(iterable)
 
     for ndx in range(0, total, batch_size):
-        batch = tuple(itertools.islice(it, batch_size))
+        batch = itertools.islice(it, batch_size)
         if not batch:
             return
         yield batch
@@ -132,18 +132,25 @@ def main():
     lock = threading.Lock()
 
     def worker(addr_batch) -> None:
-        to_add = []
+        try:
+            to_add = []
 
-        for index, addr in enumerate(addr_batch):
-            ip = str(addr)
-            name = resolve(ip)
+            for index, addr in enumerate(addr_batch):
+                ip = str(addr)
+                name = resolve(ip)
 
-            if name is not None:
-                to_add.append((ip, name))
-                print(f'{ ip } is { name }', flush=True)
+                if name is not None:
+                    to_add.append((ip, name))
+
+        except KeyboardInterrupt:
+            return
+
+        except:
+            import traceback
+            traceback.print_exc()
 
         with lock:
-            progress.update(index)
+            progress.update(args.batch_size)
             insert_many(conn, timestamp, to_add)
 
     pool = multiprocessing.pool.ThreadPool(processes=args.threads)

@@ -32,11 +32,10 @@ with open(os.path.join(cwd, 'README.md'), encoding='utf-8') as f:
 
 setup(
     name='sosiska',
-    version='0.1',
+    version='0.2',
     py_modules=[ 'sosiska' ],
     packages=[ 'sosiska' ],
     install_requires=[
-        'dnspython',
         'tqdm',
     ],
     classifiers=[
